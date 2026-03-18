@@ -1,13 +1,26 @@
 from __future__ import annotations
 
+from sentence_transformers import CrossEncoder
+
+from config import settings
 from agent.state import AgentState
 
 
-def rerank_documents(state: AgentState) -> AgentState:
-    docs = state.get("retrieved_docs", [])
-    reranked = sorted(docs, key=lambda item: item.get("score", 0.0), reverse=True)[:3]
-    state["reranked_docs"] = reranked
-    state.setdefault("node_logs", []).append(
-        {"node": "reranker", "message": f"重排序完成，保留 {len(reranked)} 条文档。"}
+_reranker = CrossEncoder(settings.reranker_model)
+
+
+async def rerank_documents(state: AgentState) -> AgentState:
+    documents = state.get("retrieved_docs", [])
+    pairs = [[state["query"], doc["content"]] for doc in documents]
+    scores = _reranker.predict(pairs) if pairs else []
+    reranked = []
+    for doc, score in zip(documents, scores):
+        reranked.append({**doc, "score": float(score)})
+    reranked.sort(key=lambda item: item["score"], reverse=True)
+    state["reranked_docs"] = reranked[:4]
+    await state["event_emitter"].emit(
+        "node_status",
+        "reranker",
+        f"Cross-Encoder 重排序完成，保留 {len(state['reranked_docs'])} 条高相关文档。",
     )
     return state

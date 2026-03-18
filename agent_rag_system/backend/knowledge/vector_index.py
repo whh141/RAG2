@@ -1,50 +1,60 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from typing import Any
+from uuid import uuid4
 
-STORE_PATH = Path(__file__).resolve().parent / "vector_store.json"
+import chromadb
+import httpx
+
+from config import settings
 
 
 class VectorIndex:
     def __init__(self) -> None:
-        if not STORE_PATH.exists():
-            STORE_PATH.write_text("[]", encoding="utf-8")
+        settings.chroma_dir.mkdir(parents=True, exist_ok=True)
+        self.client = chromadb.PersistentClient(path=str(settings.chroma_dir))
+        self.collection = self.client.get_or_create_collection(name=settings.chroma_collection)
 
     def add_documents(self, filename: str, chunks: list[str]) -> int:
-        rows = self._read()
-        start = len(rows) + 1
-        for offset, chunk in enumerate(chunks):
-            rows.append(
-                {
-                    "id": f"local-{start + offset}",
-                    "source": filename,
-                    "title": filename,
-                    "content": chunk,
-                    "score": 0.0,
-                }
-            )
-        self._write(rows)
+        ids = [str(uuid4()) for _ in chunks]
+        embeddings = self._embed(chunks)
+        metadatas = [{"filename": filename, "chunk": index + 1} for index, _ in enumerate(chunks)]
+        self.collection.upsert(ids=ids, documents=chunks, embeddings=embeddings, metadatas=metadatas)
         return len(chunks)
 
     def clear(self) -> None:
-        self._write([])
+        self.client.delete_collection(settings.chroma_collection)
+        self.collection = self.client.get_or_create_collection(name=settings.chroma_collection)
 
     def count(self) -> int:
-        return len(self._read())
+        return self.collection.count()
 
-    def search(self, query: str, limit: int = 4) -> list[dict[str, Any]]:
-        docs = self._read()
-        query_terms = [term for term in query.lower().split() if term]
-        for doc in docs:
-            content = doc["content"].lower()
-            doc["score"] = sum(content.count(term) for term in query_terms) or 0.1
-        ordered = sorted(docs, key=lambda item: item["score"], reverse=True)
-        return ordered[:limit]
+    def search(self, query: str, limit: int = 6) -> list[dict]:
+        result = self.collection.query(query_embeddings=[self._embed([query])[0]], n_results=limit)
+        ids = result.get("ids", [[]])[0]
+        docs = result.get("documents", [[]])[0]
+        metas = result.get("metadatas", [[]])[0]
+        distances = result.get("distances", [[]])[0]
+        rows = []
+        for doc_id, document, metadata, distance in zip(ids, docs, metas, distances):
+            rows.append(
+                {
+                    "id": doc_id,
+                    "source": metadata["filename"],
+                    "title": metadata["filename"],
+                    "content": document,
+                    "score": 1 - float(distance),
+                    "metadata": metadata,
+                }
+            )
+        return rows
 
-    def _read(self) -> list[dict[str, Any]]:
-        return json.loads(STORE_PATH.read_text(encoding="utf-8"))
-
-    def _write(self, rows: list[dict[str, Any]]) -> None:
-        STORE_PATH.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    def _embed(self, texts: list[str]) -> list[list[float]]:
+        response = httpx.post(
+            f"{settings.zhipu_base_url}/embeddings",
+            headers={"Authorization": f"Bearer {settings.zhipu_api_key}"},
+            json={"model": settings.glm_embedding_model, "input": texts},
+            timeout=60.0,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        return [item["embedding"] for item in payload["data"]]

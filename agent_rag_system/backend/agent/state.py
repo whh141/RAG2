@@ -12,6 +12,7 @@ class RetrievedDocument(TypedDict):
     title: str
     content: str
     score: float
+    metadata: dict[str, Any]
 
 
 class Fact(TypedDict):
@@ -23,9 +24,10 @@ class Fact(TypedDict):
 class AgentState(TypedDict, total=False):
     query: str
     intent: IntentLabel
-    node_logs: list[dict[str, Any]]
+    intent_reason: str
     retrieved_docs: list[RetrievedDocument]
     reranked_docs: list[RetrievedDocument]
     facts: list[Fact]
     answer: str
     citations: list[Fact]
+    event_emitter: Any

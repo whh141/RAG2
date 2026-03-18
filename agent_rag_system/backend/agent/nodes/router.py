@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 from agent.state import AgentState
 
 
-def route_by_intent(state: AgentState) -> str:
-    intent = state.get("intent", "local")
+async def route_after_intent(state: AgentState) -> str:
+    intent = state["intent"]
+    if intent == "local":
+        return "retriever_local"
     if intent == "web":
         return "retriever_web"
-    if intent == "hybrid":
-        return "retriever_local"
     return "retriever_local"
+
+
+async def route_after_local(state: AgentState) -> str:
+    if state["intent"] == "hybrid":
+        return "retriever_web"
+    return "reranker"

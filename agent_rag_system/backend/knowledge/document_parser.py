@@ -14,4 +14,17 @@ def parse_document(file_path: Path) -> list[str]:
     else:
         raise ValueError("Only .txt and .pdf are supported")
 
-    return [chunk.strip() for chunk in text.split("\n\n") if chunk.strip()]
+    paragraphs = [item.strip() for item in text.split("\n\n") if item.strip()]
+    chunks: list[str] = []
+    buffer = ""
+    for paragraph in paragraphs:
+        candidate = f"{buffer}\n\n{paragraph}".strip()
+        if len(candidate) <= 800:
+            buffer = candidate
+        else:
+            if buffer:
+                chunks.append(buffer)
+            buffer = paragraph
+    if buffer:
+        chunks.append(buffer)
+    return chunks

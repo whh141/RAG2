@@ -13,7 +13,7 @@ async def chat_socket(websocket: WebSocket) -> None:
     try:
         while True:
             payload = await websocket.receive_json()
-            query = payload.get("query", "").strip()
+            query = payload["query"].strip()
             async for event in run_agent_stream(query):
                 await websocket.send_json(event)
     except WebSocketDisconnect:

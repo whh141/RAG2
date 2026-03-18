@@ -1,25 +1,36 @@
 from __future__ import annotations
 
-from agent.state import AgentState
+from tavily import TavilyClient
+
+from config import settings
+from agent.state import AgentState, RetrievedDocument
 
 
-class TavilyRetriever:
-    def search(self, query: str) -> list[dict]:
-        return [
+async def retrieve_web(state: AgentState) -> AgentState:
+    client = TavilyClient(api_key=settings.tavily_api_key)
+    response = client.search(
+        state["query"],
+        search_depth="advanced",
+        max_results=5,
+        include_answer=False,
+        include_raw_content=True,
+    )
+    web_docs: list[RetrievedDocument] = []
+    for index, item in enumerate(response.get("results", []), start=1):
+        web_docs.append(
             {
-                "id": "web-1",
-                "source": "web",
-                "title": "Tavily placeholder result",
-                "content": f"与问题“{query}”相关的外部搜索结果占位内容。",
-                "score": 0.72,
+                "id": f"web-{index}",
+                "source": item.get("url", "web"),
+                "title": item.get("title", "Web Result"),
+                "content": item.get("raw_content") or item.get("content") or "",
+                "score": 0.0,
+                "metadata": {"url": item.get("url", "")},
             }
-        ]
-
-
-def retrieve_web(state: AgentState) -> AgentState:
-    docs = TavilyRetriever().search(state["query"])
-    state.setdefault("retrieved_docs", []).extend(docs)
-    state.setdefault("node_logs", []).append(
-        {"node": "retriever_web", "message": f"外部搜索完成，命中 {len(docs)} 条结果。"}
+        )
+    state["retrieved_docs"] = [*state.get("retrieved_docs", []), *web_docs]
+    await state["event_emitter"].emit(
+        "node_status",
+        "retriever_web",
+        f"Tavily 搜索完成，命中 {len(web_docs)} 条网页结果。",
     )
     return state

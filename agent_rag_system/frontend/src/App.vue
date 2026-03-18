@@ -4,7 +4,7 @@
       <section class="space-y-4">
         <header class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
           <h1 class="text-2xl font-bold">Agentic RAG 全景演示</h1>
-          <p class="mt-2 text-sm text-slate-300">知识库、智能路由、多源推理生成、白盒可视化。</p>
+          <p class="mt-2 text-sm text-slate-300">知识库、智能路由、多源推理生成、白盒可视化验证。</p>
         </header>
         <AnswerDisplay :answer="answer" :citations="citations" />
         <ChatInput @submit="sendQuery" />
@@ -43,6 +43,7 @@ const sendQuery = (query) => {
   answer.value = ''
   citations.value = []
   logs.value = []
+  currentNode.value = 'intent_classifier'
   socket.send(JSON.stringify({ query }))
 }
 
@@ -69,6 +70,7 @@ onMounted(async () => {
       answer.value += message.data
     }
     if (message.type === 'final_answer') {
+      answer.value = message.content
       citations.value = message.citations || []
       currentNode.value = 'generator'
     }
