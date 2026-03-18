@@ -12,6 +12,10 @@ async def classify_intent(state: AgentState) -> AgentState:
     await state["event_emitter"].emit(
         "node_status",
         "intent_classifier",
-        f"识别为 {state['intent']}；原因：{state['intent_reason']}",
+        {
+            "summary": f"识别为 {state['intent']}",
+            "intent": state["intent"],
+            "reason": state["intent_reason"],
+        },
     )
     return state

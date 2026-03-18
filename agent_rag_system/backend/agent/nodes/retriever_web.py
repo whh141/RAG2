@@ -31,6 +31,16 @@ async def retrieve_web(state: AgentState) -> AgentState:
     await state["event_emitter"].emit(
         "node_status",
         "retriever_web",
-        f"Tavily 搜索完成，命中 {len(web_docs)} 条网页结果。",
+        {
+            "summary": f"Tavily 搜索完成，命中 {len(web_docs)} 条网页结果。",
+            "documents": [
+                {
+                    "title": document["title"],
+                    "url": document["metadata"].get("url", ""),
+                    "preview": document["content"][:180],
+                }
+                for document in web_docs
+            ],
+        },
     )
     return state

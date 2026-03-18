@@ -21,6 +21,16 @@ async def rerank_documents(state: AgentState) -> AgentState:
     await state["event_emitter"].emit(
         "node_status",
         "reranker",
-        f"Cross-Encoder 重排序完成，保留 {len(state['reranked_docs'])} 条高相关文档。",
+        {
+            "summary": f"Cross-Encoder 重排序完成，保留 {len(state['reranked_docs'])} 条高相关文档。",
+            "documents": [
+                {
+                    "title": document["title"],
+                    "score": round(document["score"], 4),
+                    "preview": document["content"][:180],
+                }
+                for document in state["reranked_docs"]
+            ],
+        },
     )
     return state

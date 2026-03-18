@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from langgraph.graph import END, StateGraph
 
@@ -17,9 +18,9 @@ from agent.state import AgentState
 
 class EventEmitter:
     def __init__(self) -> None:
-        self.queue: asyncio.Queue[dict | None] = asyncio.Queue()
+        self.queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
 
-    async def emit(self, event_type: str, node: str, data: str) -> None:
+    async def emit(self, event_type: str, node: str, data: Any) -> None:
         await self.queue.put({"type": event_type, "node": node, "data": data})
 
     async def finish(self) -> None:

@@ -17,10 +17,11 @@
         <div class="mt-1 text-xs text-slate-400">{{ node.desc }}</div>
       </div>
     </div>
-    <div class="mt-5 space-y-2 text-sm text-slate-300">
+    <div class="mt-5 space-y-3 text-sm text-slate-300">
       <div v-for="(log, index) in logs" :key="index" class="rounded-lg bg-slate-950/70 p-3">
         <div class="font-semibold text-cyan-300">{{ log.node }}</div>
-        <div class="mt-1">{{ log.data }}</div>
+        <div class="mt-1">{{ log.summary }}</div>
+        <pre v-if="log.details" class="mt-2 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-300">{{ log.details }}</pre>
       </div>
     </div>
   </section>

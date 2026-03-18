@@ -24,6 +24,9 @@ async def compress_context(state: AgentState) -> AgentState:
     await state["event_emitter"].emit(
         "node_status",
         "compressor",
-        f"上下文压缩完成，提炼出 {len(facts)} 条核心事实。",
+        {
+            "summary": f"上下文压缩完成，提炼出 {len(facts)} 条核心事实。",
+            "facts": facts,
+        },
     )
     return state

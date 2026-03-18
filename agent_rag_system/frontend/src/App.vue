@@ -34,6 +34,13 @@ const currentNode = ref('')
 const chunkCount = ref(0)
 let socket
 
+const formatDetails = (payload) => {
+  const details = { ...payload }
+  delete details.summary
+  const hasContent = Object.keys(details).length > 0
+  return hasContent ? JSON.stringify(details, null, 2) : ''
+}
+
 const loadStats = async () => {
   const { data } = await http.get('/api/knowledge/stats')
   chunkCount.value = data.chunks
@@ -64,7 +71,11 @@ onMounted(async () => {
   socket = createChatSocket((message) => {
     if (message.type === 'node_status') {
       currentNode.value = message.node
-      logs.value.push({ node: message.node, data: message.data })
+      logs.value.push({
+        node: message.node,
+        summary: message.data.summary || '',
+        details: formatDetails(message.data),
+      })
     }
     if (message.type === 'token_stream') {
       answer.value += message.data

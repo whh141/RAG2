@@ -10,6 +10,16 @@ async def retrieve_local(state: AgentState) -> AgentState:
     await state["event_emitter"].emit(
         "node_status",
         "retriever_local",
-        f"ChromaDB 检索完成，命中 {len(documents)} 条候选片段。",
+        {
+            "summary": f"ChromaDB 检索完成，命中 {len(documents)} 条候选片段。",
+            "documents": [
+                {
+                    "title": document["title"],
+                    "score": round(document["score"], 4),
+                    "preview": document["content"][:180],
+                }
+                for document in documents
+            ],
+        },
     )
     return state
