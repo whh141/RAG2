@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+langgraph
+chromadb
+zhipuai
+httpx
+sentence-transformers
+tavily-python
+pypdf
